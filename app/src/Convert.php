@@ -131,6 +131,12 @@ class Convert
             $text = $this->cleanText($text[0], $fileMeta);
             $text = $this->runPandoc($text);
 
+            $text = preg_replace_callback('/!\[(.*?)\]\(.*?\)/', function ($matches) {
+                $fileName = $matches[1];
+                print_r("  DOWNLOAD: https://www.owiki.ms/img_auth.php/$fileName\n");
+                return "![$fileName](/.attachments/$fileName)";
+            }, $text);
+
             $text .= $this->getMetaData($fileMeta);
             $this->saveFile($fileMeta, $text);
             $this->counter++;
@@ -197,7 +203,14 @@ class Convert
     public function retrieveFileInfo($title)
     {
         $title = (string)$title[0];
-        $url = str_replace(' ', '_', $title);
+        $url = str_replace('*', '%2A', $title);
+        $url = str_replace('-', '%2D', $url);
+        $url = str_replace('?', '%3F', $url);
+        $url = str_replace('<', '%3C', $url);
+        $url = str_replace('>', '%3E', $url);
+        $url = str_replace('"', '%22', $url);
+        $url = str_replace(' ', '-', $url);
+
         $filename = $url;
         $directory = '';
 
@@ -271,7 +284,11 @@ class Convert
 
         $file = file_get_contents($this->filename);
 
-        return str_replace('xmlns=', 'ns=', $file); //$string is a string that contains xml...
+        $file = str_replace('xmlns=', 'ns=', $file); //$string is a string that contains xml...
+
+        $file = preg_replace('/\[\[Category:.*?\]\]\r?\n/i', '', $file);
+
+        return $file;
     }
 
     /**
