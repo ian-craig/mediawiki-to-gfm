@@ -111,7 +111,17 @@ class Convert
      */
     public function pandocSetup()
     {
-        $this->pandoc = new Pandoc();
+        $executable = null;
+        if (strcasecmp(substr(PHP_OS, 0, 3), 'WIN') == 0) {
+            exec('where pandoc', $output, $returnVar);
+            if ($returnVar === 0) {
+                $executable = $output[0];
+            } else {
+                printf('Warning: Failed to find pandoc executable');
+            }
+        }
+
+        $this->pandoc = new Pandoc($executable);
         $this->pandocBroken = (version_compare($this->pandoc->getVersion(), '2.0.2', '<='));
         $this->pandocOptions = [
             "from"  => "mediawiki",
@@ -131,10 +141,16 @@ class Convert
             $text = $this->cleanText($text[0], $fileMeta);
             $text = $this->runPandoc($text);
 
-            $text = preg_replace_callback('/!\[(.*?)\]\(.*?\)/', function ($matches) {
-                $fileName = $matches[1];
-                print_r("  DOWNLOAD: https://www.owiki.ms/img_auth.php/$fileName\n");
+            // Update image links
+            $text = preg_replace_callback('/!\[(.*?)\]\((\S+)\s*\r?\n?.*?\)/', function ($matches) {
+                $fileName = $matches[2];
+                print_r("  DOWNLOAD: https://wacwiki.azurewebsites.net/index.php?title=File:$fileName\n");
                 return "![$fileName](/.attachments/$fileName)";
+            }, $text);
+
+            // Convert adjacent single line code blocks to a multi-line code block
+            $text = preg_replace_callback('/(`[^`]+`\s*\r?\n){2,}/', function ($matches) {
+                 return "```\n" . str_replace("`", "", trim($matches[0])) . "\n```\n\n";
             }, $text);
 
             $text .= $this->getMetaData($fileMeta);
