@@ -1,28 +1,24 @@
 # Mediawiki to Github Flavoured Markdown
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://travis-ci.org/outofcontrol/mediawiki-to-gfm.svg?branch=master)](https://travis-ci.org/outofcontrol/mediawiki-to-gfm)
 
-Mediawiki to GFM is a script to convert a set of [Mediawiki](https://www.mediawiki.org)
-pages to [Github Flavoured Markdown](https://github.github.com/gfm/) (GFM). This script was written from a necessity to convert a MediaWiki installation to a Gitlab wiki. This code is based on [MediaWiki to Markdown](https://github.com/philipashlock/mediawiki-to-markdown) by [Philip Ashlock](https://github.com/philipashlock/). Philip graciously gave us permission to post our version as a new project.
+Convert a MediaWiki export to a directory of Markdown files for migration to Azure DevOps Wiki.
 
-Major differences include the additon of PHPUnit tests, code is broken into classes, deprecated code removed, work around for a bug in Pandoc added, fix for a common MediaWiki user error added, other small changes other small changes. 
+A fork of [outofcontrol/mediawiki-to-gfm](https://github.com/outofcontrol/mediawiki-to-gfm) with some additional tweaks to for migration to Azure DevOps Wiki.
 
-## Requirements
+## Dependencies
 
-* PHP: Tested in PHP 7.0, 7.1 and 7.2
+* PHP: Tested in PHP 7.0, 7.1, 7.2 and 7.3
 * Pandoc: Installation instructions are here https://pandoc.org/installing.html
-    - Tested on version 2.0.1.1 and 2.0.2 
-* MediaWiki: https://www.mediawiki.org/wiki/MediaWiki
-    - Tested on version 1.27.x and 1.29.x
+    - Tested on version 2.0.1.1, 2.0.2 and 2.7.3
 * Composer: Installation instructions are here https://getcomposer.org/download/
 
 ## Installation 
 
-    git clone https://github.com/outofcontrol/mediawiki-to-gfm.git
-    cd mediawiki-to-gfm
-    composer update --no-dev
-    
+- Ensure all dependencies are installed manually
+- Clone the repo
+- Run `composer update --no-dev` from the repo root
+
 ## Run
 
 Run the script on your exported MediaWiki XML file:
@@ -71,12 +67,3 @@ In theory you can convert to any of these formats… (not tested):
 Updates and improvements are welcome! Please only submit a PR if you have also written tests and tested your code! To run phpunit tests, update composer without the --no-dev parameter:
 
     composer update
-
-## Thank you
-
-[@mloskot](https://github.com/mloskot/): Verify that this script does run in PHP 7.2 ([#1](https://github.com/outofcontrol/mediawiki-to-gfm/issues/1))  
-[@timwsuqld](https://github.com/timwsuqld/): First contribution!
-
-## Disclaimer
-
-This script has not been tested on Windows. 
