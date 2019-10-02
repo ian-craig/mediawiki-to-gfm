@@ -63,6 +63,12 @@ class Convert
     private $directory_list;
 
     /**
+     * The base url for the MediaWiki data was exported from.
+     * This can be used for history links, attachment download, etc.
+     */
+    private $mediawikiBaseUrl;
+
+    /**
      * Holds XML Data for each 'page' found in the XML file
      * @var [type]
      */
@@ -110,10 +116,8 @@ class Convert
         $this->renameFiles($this->directory_list);
 
         $this->message(PHP_EOL . "$this->counter pages converted");
-        $this->message("Attachments to download:");
-        foreach ($this->attachmentsToDownload as $attachmentFileName) {
-            $this->message("  " . $attachmentFileName);
-        }
+
+        $this->saveAttachmentList();
     }
 
     /**
@@ -150,14 +154,10 @@ class Convert
             $title = (string)$node->xpath('title')[0];
             $fileMeta = $this->retrieveFileInfo($title);
 
-            if ($title != "How to Validate a Torus Script") {
-                continue;
-            }
-
             $text = $node->xpath('revision/text');
             $text = $this->cleanText($text[0], $fileMeta);
 
-            $this->message("Converting page '" . $title . "' to " . $fileMeta['directory'] . $fileMeta['filename']);
+            $this->message("Page '" . $title . "' ==> " . $fileMeta['directory'] . $fileMeta['filename'] . ".md");
             $text = $this->runPandoc($text);
 
             $text = $this->cleanMarkdown($text);
@@ -238,6 +238,26 @@ class Convert
         $file = fopen($fileMeta['directory'] . $fileMeta['filename'] . '.md', 'w');
         fwrite($file, $text);
         fclose($file);
+    }
+
+    /**
+     * Save the list of attachments to download
+     */
+    public function saveAttachmentList()
+    {
+        $attachmentDir = $this->output . ".attachments";
+        $attachmentListFile = $attachmentDir . "AttachmentList.txt";
+
+        $this->createDirectory($attachmentDir);
+
+        $file = fopen($attachmentListFile, 'w');
+        foreach ($this->attachmentsToDownload as $attachmentFileName) {
+            fwrite($file, $this->mediawikiBaseUrl . "?title=Special:Redirect/file/" . $attachmentFileName . PHP_EOL);
+        }
+        fclose($file);
+
+        $this->message(count($this->attachmentsToDownload) . " attachments found. Download these to " . $attachmentDir);
+        $this->message($attachmentListFile);
     }
 
     /**
@@ -348,8 +368,13 @@ class Convert
         if (($xml = new \SimpleXMLElement($xml)) === false) {
             throw new \Exception('Invalid XML File.');
         }
-        $this->dataToConvert = $xml->xpath('page');
 
+        $base = $xml->xpath('siteinfo/base')[0];
+        if ($base != '') {
+            $this->mediawikiBaseUrl = explode('?', $base->__toString())[0];
+        }
+
+        $this->dataToConvert = $xml->xpath('page');
         if ($this->dataToConvert == '') {
             throw new \Exception('XML Data is empty');
         }
@@ -367,7 +392,7 @@ class Convert
         $this->setOption('flatten', $options);
         $this->setOption('indexes', $options);
         $this->setOption('addmeta', $options);
-        $this->output = rtrim($this->output, '/') . '/';
+        $this->output = rtrim(str_replace("\\", "/", $this->output), '/') . '/';
     }
 
     /**
