@@ -69,6 +69,12 @@ class Convert
     private $dataToConvert;
 
     /**
+     * Collect a list of files which need to be downloaded
+     * @var Array
+     */
+    private $attachmentsToDownload = Array();
+
+    /**
      * Holds instance of Pandoc
      * @var Object
      */
@@ -102,7 +108,12 @@ class Convert
         $this->loadData($this->loadFile());
         $this->convertData();
         $this->renameFiles($this->directory_list);
-        $this->message("$this->counter files converted");
+
+        $this->message(PHP_EOL . "$this->counter pages converted");
+        $this->message("Attachments to download:");
+        foreach ($this->attachmentsToDownload as $attachmentFileName) {
+            $this->message("  " . $attachmentFileName);
+        }
     }
 
     /**
@@ -135,23 +146,16 @@ class Convert
     public function convertData()
     {
         foreach ($this->dataToConvert as $node) {
-            $fileMeta = $this->retrieveFileInfo($node->xpath('title'));
+            $title = (string)$node->xpath('title')[0];
+            $fileMeta = $this->retrieveFileInfo($title);
 
             $text = $node->xpath('revision/text');
             $text = $this->cleanText($text[0], $fileMeta);
+
+            $this->message("Converting page '" . $title . "' to " . $fileMeta['directory'] . $fileMeta['filename']);
             $text = $this->runPandoc($text);
 
-            // Update image links
-            $text = preg_replace_callback('/!\[(.*?)\]\((\S+)\s*\r?\n?.*?\)/', function ($matches) {
-                $fileName = $matches[2];
-                print_r("  DOWNLOAD: https://wacwiki.azurewebsites.net/index.php?title=File:$fileName\n");
-                return "![$fileName](/.attachments/$fileName)";
-            }, $text);
-
-            // Convert adjacent single line code blocks to a multi-line code block
-            $text = preg_replace_callback('/(`[^`]+`\s*\r?\n){2,}/', function ($matches) {
-                 return "```\n" . str_replace("`", "", trim($matches[0])) . "\n```\n\n";
-            }, $text);
+            $text = $this->cleanMarkdown($text);
 
             $text .= $this->getMetaData($fileMeta);
             $this->saveFile($fileMeta, $text);
@@ -167,11 +171,16 @@ class Convert
      */
     public function cleanText($text, $fileMeta)
     {
+
         $callback = new cleanLink($this->flatten, $fileMeta);
         $callbackFix = new pandocFix();
 
         // decode inline html
         $text = html_entity_decode($text);
+
+        // Remove HTML comments
+        $text = preg_replace('/<!--.*?-->/', "", $text);
+        
 
         // Hack to fix URLs for older version of pandoc
         if ($this->pandocBroken) {
@@ -180,6 +189,23 @@ class Convert
 
         // clean up links
         return preg_replace_callback('/\[\[(.+?)\]\]/', [$callback, "cleanLink"], $text);
+    }
+
+    public function cleanMarkdown($text)
+    {
+        // Update image links
+        $text = preg_replace_callback('/!\[(.*?)\]\((\S+)\s*\r?\n?.*?\)/', function ($matches) {
+            $fileName = $matches[2];
+            array_push($this->attachmentsToDownload, $fileName);
+            return "![$fileName](/.attachments/$fileName)";
+        }, $text);
+
+        // Convert adjacent single line code blocks to a multi-line code block
+        $text = preg_replace_callback('/(`[^`]+`\s*\r?\n){2,}/', function ($matches) {
+             return "```\n" . str_replace("`", "", trim($matches[0])) . "\n```\n\n";
+        }, $text);
+
+        return $text;
     }
 
     /**
@@ -207,19 +233,21 @@ class Convert
         $file = fopen($fileMeta['directory'] . $fileMeta['filename'] . '.md', 'w');
         fwrite($file, $text);
         fclose($file);
-
-        $this->message("Converted: " . $fileMeta['directory'] . $fileMeta['filename']);
     }
 
     /**
      * Build array of file information
-     * @param  array $title Title of current page to convert
+     * @param  string $title Title of current page to convert
      * @return array File information: Directory, filename, title and url
      */
     public function retrieveFileInfo($title)
     {
-        $title = (string)$title[0];
-        $url = str_replace('*', '%2A', $title);
+        // Drop any characters which aren't allowed
+        $url = preg_replace("/[^a-zA-Z0-9\!\@\$\%\^\&\*\(\)_\+\=\-\?\"\'\`\~\<\>,\. ]/", "", $title);
+        $url = trim($url, " \t\n\r\0\x0B.");
+
+        // Certain characters need to be sanitized, spaces become dashes
+        $url = str_replace('*', '%2A', $url);
         $url = str_replace('-', '%2D', $url);
         $url = str_replace('?', '%3F', $url);
         $url = str_replace('<', '%3C', $url);

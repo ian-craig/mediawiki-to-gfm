@@ -27,11 +27,11 @@ Major differences include the additon of PHPUnit tests, code is broken into clas
 
 Run the script on your exported MediaWiki XML file:
 
-    ./convert.php --filename=/path/to/filename.xml --output=/path/to/converted/files 
+    php ./convert.php --filename=/path/to/filename.xml --output=/path/to/converted/files 
 
 ## Options
 
-    ./convert.php --filename=/path/to/filename.xml --output=/path/to/converted/files --format=gfm --addmeta --flatten --indexes
+    php ./convert.php --filename=/path/to/filename.xml --output=/path/to/converted/files --format=gfm --addmeta --flatten --indexes
 
     --filename : Location of the mediawiki exported XML file to convert 
                  to GFM format (Required)
