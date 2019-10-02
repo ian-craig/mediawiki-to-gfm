@@ -136,7 +136,8 @@ class Convert
         $this->pandocBroken = (version_compare($this->pandoc->getVersion(), '2.0.2', '<='));
         $this->pandocOptions = [
             "from"  => "mediawiki",
-            "to"    => $this->format
+            "to"    => $this->format,
+            "wrap"  => "none",
         ];
     }
 
@@ -148,6 +149,10 @@ class Convert
         foreach ($this->dataToConvert as $node) {
             $title = (string)$node->xpath('title')[0];
             $fileMeta = $this->retrieveFileInfo($title);
+
+            if ($title != "How to Validate a Torus Script") {
+                continue;
+            }
 
             $text = $node->xpath('revision/text');
             $text = $this->cleanText($text[0], $fileMeta);
